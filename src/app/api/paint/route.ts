@@ -1,3 +1,4 @@
+// /api/paint
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
@@ -24,6 +25,7 @@ export async function POST(req: Request) {
 
                     if (currentCell) {
                         overWriteCells++;
+                        
                         return tx.cell.update({
                             where: { id: currentCell.id },
                             data: {
@@ -59,7 +61,7 @@ export async function POST(req: Request) {
                     // スコアは塗ったセル数を加算
                     score: { increment: numCells },
                     // インクは新規塗り1消費、上書き時は2消費
-                    ink_amount: { decrement: numCells + overWriteCells },
+                    ink_amount: { decrement: (numCells + overWriteCells) },
                 },
             });
 

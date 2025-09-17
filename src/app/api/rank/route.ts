@@ -9,7 +9,6 @@ export async function GET(_req: Request) {
                 id: true,
                 username: true,
                 score: true,
-                country_id: true,
             },
             orderBy: {
                 score: 'desc',
@@ -22,7 +21,6 @@ export async function GET(_req: Request) {
                 rank: index + 1,
                 username: user.username,
                 score: user.score || 0,
-                country_id: user.country_id,
             })),
         });
     } catch (error) {
