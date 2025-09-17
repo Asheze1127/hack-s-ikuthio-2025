@@ -111,55 +111,15 @@ export async function POST(req: Request) {
     }
 }
 
-export async function GET(req: Request) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function GET(_req: Request) {
     try {
-        // クエリパラメータを取得
-        const url = new URL(req.url);
-        const dateParam = url.searchParams.get('date');
-        const dateIsoParam = url.searchParams.get('date_iso');
-        const dateLocalParam = url.searchParams.get('date_local');
-
-        console.log('=== ボタンAPI デバッグ情報 ===');
-        console.log('受信したクエリパラメータ:');
-        console.log('- date:', dateParam);
-        console.log('- date_iso:', dateIsoParam);
-        console.log('- date_local:', dateLocalParam);
-
         // 今日の日付（時間は00:00:00）
         const today = new Date();
         const dateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
-        console.log('計算された日付フィルター:');
-        console.log('- today:', today);
-        console.log('- dateOnly:', dateOnly);
-        console.log('- dateOnly ISO:', dateOnly.toISOString());
-
-        // 全ボタンデータを確認（デバッグ用）
-        const allButtons = await prisma.button.findMany({
-            orderBy: { date: 'desc' },
-            take: 10
-        });
-        console.log('データベース内の全ボタン（最新10件）:', allButtons);
-
-        // 各ボタンの日付を詳細分析
-        allButtons.forEach((button, index) => {
-            console.log(`ボタン${index + 1}:`, {
-                id: button.id,
-                date: button.date,
-                dateISO: button.date.toISOString(),
-                dateOnly: new Date(button.date.getFullYear(), button.date.getMonth(), button.date.getDate()).toISOString(),
-                isToday: button.date.toDateString() === dateOnly.toDateString()
-            });
-        });
-
-        // 複数の日付フィルタリング方法をテスト
-        const buttons1 = await prisma.button.findMany({
-            where: {
-                date: dateOnly
-            }
-        });
-
-        const buttons2 = await prisma.button.findMany({
+        // 正しい日付フィルタリング（範囲指定）
+        const buttons = await prisma.button.findMany({
             where: {
                 date: {
                     gte: new Date(dateOnly.getFullYear(), dateOnly.getMonth(), dateOnly.getDate()),
@@ -168,36 +128,9 @@ export async function GET(req: Request) {
             }
         });
 
-        const buttons3 = await prisma.button.findMany({
-            where: {
-                date: {
-                    gte: new Date('2025-09-17T00:00:00.000Z'),
-                    lt: new Date('2025-09-18T00:00:00.000Z')
-                }
-            }
-        });
-
-        console.log('=== 日付フィルタリング結果比較 ===');
-        console.log('方法1 (date: dateOnly):', buttons1.length, buttons1);
-        console.log('方法2 (gte/lt):', buttons2.length, buttons2);
-        console.log('方法3 (固定日付):', buttons3.length, buttons3);
-
-        const buttons = buttons1;
-        console.log('=== デバッグ情報終了 ===');
-
         return NextResponse.json({
             status: "success",
             buttons: buttons,
-            debug: {
-                queryParams: {
-                    date: dateParam,
-                    date_iso: dateIsoParam,
-                    date_local: dateLocalParam
-                },
-                filterDate: dateOnly.toISOString(),
-                totalButtons: allButtons.length,
-                filteredButtons: buttons.length
-            }
         });
     } catch (error) {
         console.error("Button GET error:", error);
