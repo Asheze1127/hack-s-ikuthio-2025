@@ -16,18 +16,20 @@ datasource db {
 }
 
 model User {
-  id          String   @id @default(uuid())
-  username    String   @unique
-  password    String
-  color       String?
-  score       Int?
-  country_id  String   @default("0")
-  ink_amount  Int      @default(100)
-  createdAt   DateTime @default(now())
+  id         String   @id @default(uuid())
+  username   String   @unique
+  password   String
+  score      Int      @default(0)
+  ink_amount Int      @default(1000)
+  cells      Cell[]
+  createdAt  DateTime @default(now())
+  
+  @@map("users")
 }
 
 model Cell {
   id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
   userId    String
   zoom      Int
   tileX     Int
@@ -36,9 +38,9 @@ model Cell {
   cellY     Int
   color     String
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@index([zoom, tileX, tileY, cellX, cellY])
-  @@index([userId])
+  @@unique([zoom, tileX, tileY, cellX, cellY], name: "cell_position")
+  @@index([zoom, tileX, tileY])
+  @@index([userId, updatedAt])
 }
-
-

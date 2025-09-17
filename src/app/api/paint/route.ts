@@ -1,3 +1,4 @@
+// /api/paint
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
@@ -11,7 +12,7 @@ export async function POST(req: Request) {
             let overWriteCells = 0;
 
             const savedCells = await Promise.all(
-                cells.map(async (cell: { cell_x: number; cell_y: number; color: string }) => {//一回のクエリ送りたい
+                cells.map(async (cell: { cell_x: number; cell_y: number; color: string }) => {
                     const currentCell = await tx.cell.findFirst({
                         where: {
                             zoom,
