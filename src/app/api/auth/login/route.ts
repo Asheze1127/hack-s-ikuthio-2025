@@ -13,13 +13,14 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-export async function OPTIONS(request: Request) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function OPTIONS(_request: Request) {
   return new NextResponse(null, { headers: corsHeaders });
 }
 
-export async function POST(req: Request) {
+export async function POST(_req: Request) {
   try {
-    const { username, password } = await req.json();
+    const { username, password } = await _req.json();
 
     const user = await prisma.user.findUnique({ where: { username } });
     if (!user) {
@@ -31,9 +32,9 @@ export async function POST(req: Request) {
     console.log("--- Password Comparison ---");
     console.log("Password from Request:", `"${password}"`); // 受け取ったパスワード
     console.log("Hashed Password from DB:", `"${user.password}"`); // DBに保存されているハッシュ
-    
+
     const isValid = await compare(password, user.password);
-    
+
     console.log("Comparison Result (isValid):", isValid); // 比較結果
     console.log("--------------------------");
     // ★★★【ここまで】★★★
