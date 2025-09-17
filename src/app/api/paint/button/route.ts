@@ -111,12 +111,35 @@ export async function POST(req: Request) {
     }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function GET(_req: Request) {
+export async function GET(req: Request) {
     try {
+        // クエリパラメータを取得
+        const url = new URL(req.url);
+        const dateParam = url.searchParams.get('date');
+        const dateIsoParam = url.searchParams.get('date_iso');
+        const dateLocalParam = url.searchParams.get('date_local');
+
+        console.log('=== ボタンAPI デバッグ情報 ===');
+        console.log('受信したクエリパラメータ:');
+        console.log('- date:', dateParam);
+        console.log('- date_iso:', dateIsoParam);
+        console.log('- date_local:', dateLocalParam);
+
         // 今日の日付（時間は00:00:00）
         const today = new Date();
         const dateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+        console.log('計算された日付フィルター:');
+        console.log('- today:', today);
+        console.log('- dateOnly:', dateOnly);
+        console.log('- dateOnly ISO:', dateOnly.toISOString());
+
+        // 全ボタンデータを確認（デバッグ用）
+        const allButtons = await prisma.button.findMany({
+            orderBy: { date: 'desc' },
+            take: 10
+        });
+        console.log('データベース内の全ボタン（最新10件）:', allButtons);
 
         const buttons = await prisma.button.findMany({
             where: {
@@ -124,9 +147,23 @@ export async function GET(_req: Request) {
             }
         });
 
+        console.log('フィルタリング後のボタン数:', buttons.length);
+        console.log('フィルタリング後のボタン:', buttons);
+        console.log('=== デバッグ情報終了 ===');
+
         return NextResponse.json({
             status: "success",
             buttons: buttons,
+            debug: {
+                queryParams: {
+                    date: dateParam,
+                    date_iso: dateIsoParam,
+                    date_local: dateLocalParam
+                },
+                filterDate: dateOnly.toISOString(),
+                totalButtons: allButtons.length,
+                filteredButtons: buttons.length
+            }
         });
     } catch (error) {
         console.error("Button GET error:", error);
