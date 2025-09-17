@@ -25,6 +25,13 @@ export async function POST(req: Request) {
 
                     if (currentCell) {
                         overWriteCells++;
+
+                        await tx.user.update({
+                            where: { id: currentCell.id },
+                            data: {
+                                score: { decrement: 1 },
+                            },
+                        });
                         
                         return tx.cell.update({
                             where: { id: currentCell.id },
