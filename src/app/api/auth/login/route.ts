@@ -1,58 +1,61 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-const SECRET_KEY = process.env.JWT_SECRET || 'your-secret-key';
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { compare } from "bcryptjs";
+import jwt from "jsonwebtoken"; // JWTをインポート
 
+// JWTの秘密鍵。実際には .env ファイルで管理すべきです。
+const SECRET_KEY = process.env.JWT_SECRET || 'your-super-secret-key-that-is-long';
+
+// CORS設定（念のため記載）
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*", // まずは "*" で許可。あとで localhost に限定も可能
-  "Access-Control-Allow-Methods": "POST, OPTIONS", // 許可するHTTPメソッド
-  "Access-Control-Allow-Headers": "Content-Type", // 許可するリクエストヘッダー
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function OPTIONS(_request: Request) {
+export async function OPTIONS(request: Request) {
   return new NextResponse(null, { headers: corsHeaders });
 }
 
-// POSTメソッドの処理
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
-    const { username, password } = await request.json();
+    const { username, password } = await req.json();
+
     const user = await prisma.user.findUnique({ where: { username } });
-
     if (!user) {
-      // 失敗時にもCORSヘッダーを返す
-      return new NextResponse(JSON.stringify({ message: 'Invalid credentials' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
+      return NextResponse.json({ error: "Invalid username or password" }, { status: 401, headers: corsHeaders });
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      // 失敗時にもCORSヘッダーを返す
-      return new NextResponse(JSON.stringify({ message: 'Invalid credentials' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
+    // ★★★【デバッグ用ログ】★★★
+    // Vercelのログで、実際に比較される値を確認します
+    console.log("--- Password Comparison ---");
+    console.log("Password from Request:", `"${password}"`); // 受け取ったパスワード
+    console.log("Hashed Password from DB:", `"${user.password}"`); // DBに保存されているハッシュ
+    
+    const isValid = await compare(password, user.password);
+    
+    console.log("Comparison Result (isValid):", isValid); // 比較結果
+    console.log("--------------------------");
+    // ★★★【ここまで】★★★
+
+    if (!isValid) {
+      return NextResponse.json({ error: "Invalid username or password" }, { status: 401, headers: corsHeaders });
     }
 
-    const token = jwt.sign({ userId: user.id, username: user.username }, SECRET_KEY, {
-      expiresIn: '1h',
-    });
+    // ★★★【JWT生成処理】★★★
+    // 認証に成功したら、JWTを生成する
+    const token = jwt.sign(
+      { userId: user.id, username: user.username },
+      SECRET_KEY,
+      { expiresIn: '1h' } // トークンの有効期限
+    );
 
+    // ★★★【JWTをレスポンスで返す】★★★
+    // フロントエンドが期待している 'token' を返す
+    return NextResponse.json({ token }, { headers: corsHeaders });
 
-    return new NextResponse(JSON.stringify({ token }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json', ...corsHeaders },
-    });
-  } catch (error) {
-    console.error(error);
-    // エラー時にもCORSヘッダーを返す
-    return new NextResponse(JSON.stringify({ message: 'Internal server error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json', ...corsHeaders },
-    });
+  } catch (err) {
+    console.error("Login error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500, headers: corsHeaders });
   }
 }
