@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-
-const prisma = new PrismaClient();
 const SECRET_KEY = process.env.JWT_SECRET || 'your-secret-key';
 
 const corsHeaders = {
@@ -12,15 +10,16 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type", // 許可するリクエストヘッダー
 };
 
-export async function OPTIONS(request: Request) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function OPTIONS(_request: Request) {
   return new NextResponse(null, { headers: corsHeaders });
 }
 
 // POSTメソッドの処理
 export async function POST(request: Request) {
   try {
-    const { email, password } = await request.json();
-    const user = await prisma.user.findUnique({ where: { email } });
+    const { username, password } = await request.json();
+    const user = await prisma.user.findUnique({ where: { username } });
 
     if (!user) {
       // 失敗時にもCORSヘッダーを返す
@@ -39,7 +38,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const token = jwt.sign({ userId: user.id, email: user.email }, SECRET_KEY, {
+    const token = jwt.sign({ userId: user.id, username: user.username }, SECRET_KEY, {
       expiresIn: '1h',
     });
 
