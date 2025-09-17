@@ -2,32 +2,52 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hash } from "bcrypt";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function GET(_req: Request) {
-    return NextResponse.json({ response: "Signup API Success!!!" });
+// ★★★ CORS許可設定を追加 ★★★
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+// ★★★ OPTIONSメソッドへの対応を追加 ★★★
+export async function OPTIONS(request: Request) {
+  return new NextResponse(null, { headers: corsHeaders });
 }
 
 export async function POST(req: Request) {
-    try {
-        const { username, password } = await req.json();
+  try {
+    const { username, password } = await req.json();
 
-        const existing = await prisma.user.findUnique({ where: { username } });
-        if (existing) {
-            return NextResponse.json({ error: "Username already exists" }, { status: 400 });
-        }
-
-        const hashed = await hash(password, 10);
-
-        const user = await prisma.user.create({
-            data: { username, password: hashed },
-        });
-
-        return NextResponse.json({ id: user.id, username: user.username });
-    } catch (error) {
-        console.error("Signup error:", error);
-        return NextResponse.json({
-            error: "Internal server error",
-            details: error instanceof Error ? error.message : String(error)
-        }, { status: 500 });
+    // ユーザーが既に存在するか確認
+    const existingUser = await prisma.user.findUnique({ where: { username } });
+    if (existingUser) {
+      return NextResponse.json(
+        { error: "Username already exists" },
+        // ★★★ レスポンスにCORSヘッダーを追加 ★★★
+        { status: 409, headers: corsHeaders }
+      );
     }
+
+    // パスワードをハッシュ化
+    const hashedPassword = await hash(password, 10);
+
+    // ユーザーを作成
+    const user = await prisma.user.create({
+      data: {
+        username,
+        password: hashedPassword,
+      },
+    });
+
+    // ★★★ 成功時のレスポンスにもCORSヘッダーを追加 ★★★
+    return NextResponse.json({ id: user.id, username: user.username }, { headers: corsHeaders });
+
+  } catch (err) {
+    console.error("Signup error:", err);
+    // ★★★ エラー時にもCORSヘッダーを追加 ★★★
+    return NextResponse.json(
+        { error: "Internal server error" },
+        { status: 500, headers: corsHeaders }
+    );
+  }
 }
