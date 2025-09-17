@@ -1,23 +1,40 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../src/generated/prisma"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL") // ← これが重要
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Cell {
+  id        String   @id @default(uuid())
+  userId    String
+  zoom      Int
+  tileX     Int
+  tileY     Int
+  cellX     Int
+  cellY     Int
+  color     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([zoom, tileX, tileY, cellX, cellY], name: "cell_position")
+  @@index([zoom, tileX, tileY])
+  @@index([userId, updatedAt])
 }
 
 model User {
-  id        String   @id @default(uuid())  // ← UUIDに変更
-  username  String   @unique
-  password  String
-  createdAt DateTime @default(now())
+  id         String   @id @default(uuid())
+  username   String   @unique
+  password   String
+  score      Int      @default(0)
+  ink_amount Int      @default(1000)
+  createdAt  DateTime @default(now())
+  cells      Cell[]
+  
+  @@map("users")
 }
