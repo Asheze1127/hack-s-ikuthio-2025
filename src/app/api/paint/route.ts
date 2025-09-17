@@ -27,8 +27,19 @@ export async function POST(req: Request) {
             );
 
             let overWriteCells = 0;
-            const createData: any[] = [];
-            const updateData: any[] = [];
+            const createData: Array<{
+                userId: string;
+                zoom: number;
+                tileX: number;
+                tileY: number;
+                cellX: number;
+                cellY: number;
+                color: string;
+            }> = [];
+            const updateData: Array<{
+                where: { id: string };
+                data: { color: string; userId: string };
+            }> = [];
 
             cells.forEach((cell: { cell_x: number; cell_y: number; color: string }) => {
                 const key = `${cell.cell_x},${cell.cell_y}`;
