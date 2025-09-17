@@ -39,6 +39,7 @@ export async function POST(req: Request) {
             const updateData: Array<{
                 where: { id: string };
                 data: { color: string; userId: string };
+                previousOwnerId: string;
             }> = [];
 
             cells.forEach((cell: { cell_x: number; cell_y: number; color: string }) => {
@@ -53,6 +54,7 @@ export async function POST(req: Request) {
                             color: cell.color,
                             userId: user_id,
                         },
+                        previousOwnerId: existingCell.userId, // 元の所有者IDを記録
                     });
                 } else {
                     createData.push({
@@ -70,8 +72,30 @@ export async function POST(req: Request) {
             // 一括作成・更新
             const [createdCells, updatedCells] = await Promise.all([
                 createData.length > 0 ? tx.cell.createMany({ data: createData }) : null,
-                Promise.all(updateData.map(update => tx.cell.update(update))),
+                Promise.all(updateData.map(update => tx.cell.update({
+                    where: update.where,
+                    data: update.data
+                }))),
             ]);
+
+            // 上書きされた元の所有者のスコアを減らす
+            if (updateData.length > 0) {
+                const previousOwnerIds = [...new Set(updateData.map(u => u.previousOwnerId))];
+                const scoreDecrements = new Map<string, number>();
+
+                updateData.forEach(u => {
+                    scoreDecrements.set(u.previousOwnerId, (scoreDecrements.get(u.previousOwnerId) || 0) + 1);
+                });
+
+                await Promise.all(
+                    previousOwnerIds.map(ownerId =>
+                        tx.user.update({
+                            where: { id: ownerId },
+                            data: { score: { decrement: scoreDecrements.get(ownerId) || 0 } }
+                        })
+                    )
+                );
+            }
 
             // ユーザーのインクとスコアを更新
             const updatedUser = await tx.user.update({
