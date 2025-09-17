@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hash } from "bcrypt";
+import { hash } from "bcryptjs";
 
 // ★★★ CORS許可設定を追加 ★★★
 const corsHeaders = {
