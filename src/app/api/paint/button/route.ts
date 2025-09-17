@@ -141,14 +141,48 @@ export async function GET(req: Request) {
         });
         console.log('データベース内の全ボタン（最新10件）:', allButtons);
 
-        const buttons = await prisma.button.findMany({
+        // 各ボタンの日付を詳細分析
+        allButtons.forEach((button, index) => {
+            console.log(`ボタン${index + 1}:`, {
+                id: button.id,
+                date: button.date,
+                dateISO: button.date.toISOString(),
+                dateOnly: new Date(button.date.getFullYear(), button.date.getMonth(), button.date.getDate()).toISOString(),
+                isToday: button.date.toDateString() === dateOnly.toDateString()
+            });
+        });
+
+        // 複数の日付フィルタリング方法をテスト
+        const buttons1 = await prisma.button.findMany({
             where: {
                 date: dateOnly
             }
         });
 
-        console.log('フィルタリング後のボタン数:', buttons.length);
-        console.log('フィルタリング後のボタン:', buttons);
+        const buttons2 = await prisma.button.findMany({
+            where: {
+                date: {
+                    gte: new Date(dateOnly.getFullYear(), dateOnly.getMonth(), dateOnly.getDate()),
+                    lt: new Date(dateOnly.getFullYear(), dateOnly.getMonth(), dateOnly.getDate() + 1)
+                }
+            }
+        });
+
+        const buttons3 = await prisma.button.findMany({
+            where: {
+                date: {
+                    gte: new Date('2025-09-17T00:00:00.000Z'),
+                    lt: new Date('2025-09-18T00:00:00.000Z')
+                }
+            }
+        });
+
+        console.log('=== 日付フィルタリング結果比較 ===');
+        console.log('方法1 (date: dateOnly):', buttons1.length, buttons1);
+        console.log('方法2 (gte/lt):', buttons2.length, buttons2);
+        console.log('方法3 (固定日付):', buttons3.length, buttons3);
+
+        const buttons = buttons1;
         console.log('=== デバッグ情報終了 ===');
 
         return NextResponse.json({
