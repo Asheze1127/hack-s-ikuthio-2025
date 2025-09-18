@@ -14,10 +14,26 @@ export async function OPTIONS(_request: Request) {
     return new NextResponse(null, { headers: corsHeaders });
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function POST(_req: Request) {
     try {
-        const { button_id } = await _req.json();
+        const { tile_x, tile_y, cell_x, cell_y } = await _req.json();
+
+        // 今日の日付（時間は00:00:00）
+        const today = new Date();
+        const dateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+        const button = await prisma.button.findFirst({
+            where: {
+                date: {
+                    gte: dateOnly,
+                    lt: new Date(dateOnly.getTime() + 24 * 60 * 60 * 1000) // 翌日の00:00:00
+                }
+            }
+        });
+
+        const button_id = button?.id;
+
+        console.log(button_id);
         // isPushがfalseの参加者数を取得
         const notPushedCount = await prisma.participant.count({
             where: {
@@ -47,7 +63,7 @@ export async function POST(_req: Request) {
             const winnerRatio = winnerCount / totalCount;
             if (winnerRatio <= 0.5) {
                 // 勝者数が少ないほど多くのインクを獲得
-                inkAmountToAdd = Math.floor((0.5 - winnerRatio) * 10) + 5;
+                inkAmountToAdd = Math.floor((0.5 - winnerRatio) * 1000) + 5;
             }
         }
 
@@ -74,6 +90,15 @@ export async function POST(_req: Request) {
                 }
             });
         }
+
+        await prisma.button.create({
+            data: {
+                tile_x,
+                tile_y,
+                cell_x,
+                cell_y,
+            }
+        });
 
         return NextResponse.json({
             status: "success",
